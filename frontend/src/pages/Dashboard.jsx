@@ -184,6 +184,111 @@ function Dashboard({ liveData, alerts, onNavigate }) {
 
       </div>
 
+      {/* 📡 LIVE IoT TELEMETRY HARVESTER */}
+      <div className="glass-panel p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/30 dark:bg-slate-900/10 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-base font-bold flex items-center gap-2">
+              <Network className="text-clinical-500 animate-pulse" size={18} />
+              <span>Live IoT Telemetry Harvester</span>
+            </h3>
+            <p className="text-[11px] text-slate-400 font-semibold">
+              Real-time localized micro-sensor array tracking ambient climate drifts and green solar flux rates.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5 animate-ping"></span>
+              SENSOR ARRAY ACTIVE
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {/* Temperature Sensor Array Card */}
+          <div className="p-4 bg-slate-100 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800/80 space-y-3">
+            <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              <span>Thermodynamic Sensors</span>
+              <span className="text-clinical-400">5 Active Nodes</span>
+            </div>
+            
+            <div className="space-y-2">
+              {Object.entries(liveData.wings).map(([name, w], index) => (
+                <div key={name} className="flex items-center justify-between text-xs py-1 border-b border-slate-200/50 dark:border-slate-855 last:border-0">
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-clinical-500 rounded-full animate-pulse"></span>
+                    <span className="font-bold text-slate-700 dark:text-slate-200">{name} Zone</span>
+                    <span className="text-[9px] text-slate-400 font-mono">IoT-T-{name.toUpperCase()}0{index+1}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-extrabold text-slate-800 dark:text-slate-100">{w.temp}°C</span>
+                    {w.temp >= 18 && w.temp <= 24 ? (
+                      <span className="px-1 py-0.2 bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 rounded text-[9px] font-extrabold">SAFE</span>
+                    ) : (
+                      <span className="px-1 py-0.2 bg-yellow-500/15 text-yellow-400 border border-yellow-500/20 rounded text-[9px] font-extrabold">DRIFT</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Solar Flux & Irradiation Sensor Card */}
+          <div className="p-4 bg-slate-100 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800/80 space-y-3">
+            <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              <span>Solar Irradiance (Lux)</span>
+              <span className="text-yellow-500">Node: IoT-SOL-LX09</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-3 bg-slate-200/40 dark:bg-slate-950/40 rounded-xl border border-slate-200/20 dark:border-slate-800 text-center">
+                <span className="text-[9px] text-slate-400 font-bold block uppercase">Solar Flux</span>
+                <span className="text-lg font-extrabold text-yellow-500">{(liveData.renewables.solar_gen * 11.5).toFixed(0)} <span className="text-[10px] font-semibold text-slate-400">W/m²</span></span>
+              </div>
+              <div className="p-3 bg-slate-200/40 dark:bg-slate-950/40 rounded-xl border border-slate-200/20 dark:border-slate-800 text-center">
+                <span className="text-[9px] text-slate-400 font-bold block uppercase">Panel Temp</span>
+                <span className="text-lg font-extrabold text-clinical-400">{(liveData.wings.Admin.temp + 4.2).toFixed(1)} <span className="text-[10px] font-semibold text-slate-400">°C</span></span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-emerald-500/5 border border-emerald-500/25 rounded-xl space-y-1">
+              <div className="flex justify-between text-[10px] font-extrabold text-emerald-400">
+                <span>ACTIVE CO2 MITIGATION</span>
+                <span>{(liveData.renewables.solar_gen * 0.42).toFixed(2)} kg/hr</span>
+              </div>
+              <p className="text-[10px] text-slate-400 font-semibold leading-relaxed">
+                Rooftop Solar arrays currently absorbing Clean Green photons, mitigating grid dependencies.
+              </p>
+            </div>
+          </div>
+
+          {/* Cumulative Green Offsets Card */}
+          <div className="p-4 bg-slate-100 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800/80 space-y-3 flex flex-col justify-between">
+            <div>
+              <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                <span>Green Financial Offset</span>
+                <span className="text-emerald-500 font-mono">Live Counter</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-extrabold tracking-tight text-emerald-500">${liveData.savings.cost_saved_usd}</span>
+                <span className="text-[10px] font-bold text-slate-400">SAVED THIS MONTH</span>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-200 dark:border-slate-800/50 pt-3 grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <span className="text-[9px] text-slate-400 block font-bold">TOTAL SAVED</span>
+                <span className="font-extrabold text-slate-700 dark:text-slate-100">{liveData.savings.energy_saved_kwh} kWh</span>
+              </div>
+              <div>
+                <span className="text-[9px] text-slate-400 block font-bold">CO2 PREVENTED</span>
+                <span className="font-extrabold text-slate-700 dark:text-slate-100">{liveData.savings.carbon_saved_kg} kg</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* ⚠️ DEDICATED AI ANOMALY & LEAKAGE CONTROL CENTRE */}
       <div className="glass-panel p-6 rounded-2xl border border-red-500/30 bg-red-500/5 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
