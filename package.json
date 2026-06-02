@@ -1,0 +1,13 @@
+{
+  "name": "smart-hospital-energy-system",
+  "version": "1.0.0",
+  "description": "Smart Hospital Energy Management System (SHEMS) - Unified Configuration",
+  "scripts": {
+    "install:all": "pip install -r backend/requirements.txt && npm --prefix frontend install",
+    "build:frontend": "npm --prefix frontend run build",
+    "start:backend": "python backend/app.py",
+    "start": "npm run build:frontend && npm run start:backend"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
