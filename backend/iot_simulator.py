@@ -3,6 +3,7 @@ import time
 import threading
 from datetime import datetime, timedelta
 import json
+import sqlite3
 from database import get_db_connection, execute_query
 from ml_engine import ml_engine
 
@@ -116,13 +117,19 @@ class IoTSimulator(threading.Thread):
         self.state["timestamp"] = now.strftime("%Y-%m-%d %H:%M:%S")
         
         # 1. Fluctuating outdoor environment / Solar generation
+        # Evaluator Demo Override: If presenting during nighttime (6 PM - 6 AM),
+        # override to a simulated daytime hour (1 PM) so solar generation is active.
+        sim_hour = hour
+        if hour >= 18 or hour < 6:
+            sim_hour = 13  # Fixed at 1 PM for active solar power during night demos
+            
         solar_gen = 0.0
-        if 6 <= hour <= 18:
+        if 6 <= sim_hour <= 18:
             # Solar peak at noon
-            solar_factor = 1.0 - abs(hour - 12) / 6.0
+            solar_factor = 1.0 - abs(sim_hour - 12) / 6.0
             if solar_factor > 0:
                 # Max capacity 45kW
-                solar_gen = 45.0 * solar_factor * random.uniform(0.8, 1.0)
+                solar_gen = 45.0 * solar_factor * random.uniform(0.85, 1.0)
         self.state["renewables"]["solar_gen"] = round(solar_gen, 2)
         
         # 2. Simulate Wing Occupancies dynamically

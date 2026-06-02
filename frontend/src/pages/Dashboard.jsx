@@ -247,7 +247,7 @@ function Dashboard({ liveData, alerts, onNavigate }) {
               </div>
               <div className="p-3 bg-slate-200/40 dark:bg-slate-950/40 rounded-xl border border-slate-200/20 dark:border-slate-800 text-center">
                 <span className="text-[9px] text-slate-400 font-bold block uppercase">Panel Temp</span>
-                <span className="text-lg font-extrabold text-clinical-400">{(liveData.wings.Admin.temp + 4.2).toFixed(1)} <span className="text-[10px] font-semibold text-slate-400">°C</span></span>
+                <span className="text-lg font-extrabold text-clinical-400">{( (liveData.wings.Administration?.temp ?? liveData.wings.Admin?.temp ?? 22.0) + 4.2 ).toFixed(1)} <span className="text-[10px] font-semibold text-slate-400">°C</span></span>
               </div>
             </div>
 
