@@ -62,9 +62,9 @@ function Settings({ liveData, userRole, onResetDb }) {
     }
   };
 
-  const handleTogglePolicy = async (key) => {
+  const handleTogglePolicy = async (key, value = null) => {
     try {
-      await api.toggleAutomation(key);
+      await api.toggleAutomation(key, value);
     } catch (err) {
       console.error(err);
     }
@@ -210,6 +210,38 @@ function Settings({ liveData, userRole, onResetDb }) {
         {/* Panel 2: Model & Database settings */}
         <div className="glass-panel p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm lg:col-span-1 space-y-6">
           
+          {/* Data Collection Mode Selector */}
+          <div className="space-y-3 pb-4 border-b border-slate-200 dark:border-slate-800/60">
+            <h3 className="text-sm font-bold flex items-center gap-2 text-slate-700 dark:text-slate-200">
+              <Database size={16} className="text-clinical-400" />
+              <span>Data Ingestion Profile</span>
+            </h3>
+            <p className="text-[10px] text-slate-400 font-semibold leading-relaxed">
+              Select central BEMS telemetry integration.
+            </p>
+            <div className="space-y-1.5">
+              {[
+                { id: 1, name: "Mode 1: Infrastructure Mode", desc: "BACnet / Modbus REST API" },
+                { id: 2, name: "Mode 2: IoT Sensor Mode", desc: "ESP32 micro-sensors Wifi/MQTT" },
+                { id: 3, name: "Mode 3: Hybrid Mode", desc: "Combined Ingress Telemetry" }
+              ].map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => handleTogglePolicy('data_collection_mode', String(m.id))}
+                  disabled={userRole === 'Technician'}
+                  className={`w-full text-left p-2.5 rounded-xl border text-xs font-semibold flex flex-col transition-all ${
+                    liveData.data_collection_mode === m.id
+                      ? 'bg-clinical-500/10 border-clinical-500/40 text-clinical-450'
+                      : 'bg-slate-100 dark:bg-slate-800/20 border-slate-200 dark:border-slate-800/40 hover:bg-slate-200 dark:hover:bg-slate-800/60 text-slate-600 dark:text-slate-300'
+                  }`}
+                >
+                  <span>{m.name}</span>
+                  <span className="text-[9px] opacity-70 mt-0.5">{m.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* ML Weights Reset */}
           <div className="space-y-3">
             <h3 className="text-sm font-bold flex items-center gap-2 text-slate-700 dark:text-slate-200">

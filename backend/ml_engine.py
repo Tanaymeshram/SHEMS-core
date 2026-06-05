@@ -219,6 +219,112 @@ class MLEngine:
             prob = min(99.0, max(1.0, fail_score))
             return round(prob, 2)
 
+    def predict_energy_forecast(self, model="random_forest", horizon="day", base_temp=24.0):
+        if self.energy_model is None:
+            self.load_models()
+            
+        now = datetime.now()
+        predictions = []
+        
+        # Determine number of steps and interval time delta
+        if horizon == "hour":
+            steps = 12
+            delta = timedelta(minutes=5)
+            time_format = "%H:%M"
+        elif horizon == "day":
+            steps = 24
+            delta = timedelta(hours=1)
+            time_format = "%H:00"
+        elif horizon == "week":
+            steps = 7
+            delta = timedelta(days=1)
+            time_format = "%a (%m/%d)"
+        elif horizon == "month":
+            steps = 30
+            delta = timedelta(days=1)
+            time_format = "%m/%d"
+        else:
+            steps = 24
+            delta = timedelta(hours=1)
+            time_format = "%H:00"
+
+        # Generate predictions
+        for i in range(steps):
+            if horizon == "hour":
+                pred_time = now + timedelta(minutes=i*5)
+            elif horizon == "day":
+                pred_time = now + timedelta(hours=i)
+            else:
+                pred_time = now + timedelta(days=i)
+                
+            label = pred_time.strftime(time_format)
+            hour = pred_time.hour
+            weekday = pred_time.weekday()
+            is_weekend = weekday >= 5
+            
+            # Simulated outdoor temp drift
+            outdoor_temp = base_temp + 4.0 * np.sin((hour - 8) / 24 * 2 * np.pi)
+            if horizon in ["week", "month"]:
+                # Add slight multi-day drift
+                outdoor_temp += 2.0 * np.sin(i / steps * 2 * np.pi)
+            
+            # Simulated occupancy headcount
+            if hour >= 22 or hour <= 6:
+                pred_occ = random.randint(40, 60)
+            elif 8 <= hour <= 17:
+                pred_occ = random.randint(120, 180) if not is_weekend else random.randint(60, 90)
+            else:
+                pred_occ = random.randint(80, 110)
+            
+            # Predict baseline power draw
+            if self.energy_model is not None and horizon == "day":
+                features = pd.DataFrame([[hour, weekday, outdoor_temp, pred_occ]], 
+                                     columns=['hour', 'dayofweek', 'avg_temp', 'total_occ'])
+                pred_power = float(self.energy_model.predict(features)[0])
+            else:
+                base_power = 65.0
+                hvac_contribution = max(0, (outdoor_temp - 22.0) * 2.5)
+                occupancy_contribution = pred_occ * 0.25
+                pred_power = base_power + hvac_contribution + occupancy_contribution
+            
+            # Model-specific modifiers to reflect different architectures
+            if model == "xgboost":
+                # XGBoost: highly sensitive to temp and occupancy spikes, higher variance
+                temp_factor = 1.12 if outdoor_temp > 25.0 else 0.95
+                occ_factor = 1.08 if pred_occ > 130 else 0.92
+                pred_power = pred_power * temp_factor * occ_factor + random.uniform(-3, 3)
+            elif model == "lstm":
+                # LSTM: smooth rolling characteristics with slight time lag (simulated via offset sine)
+                pred_power = pred_power + 4.0 * np.sin(i / 2.5) + random.uniform(-1, 1)
+            else:
+                # Random Forest: standard regression baseline
+                pred_power = pred_power + random.uniform(-2, 2)
+            
+            # Solar peak generation
+            solar_gen = 0.0
+            if 6 <= hour <= 18:
+                solar_factor = 1.0 - abs(hour - 12) / 6.0
+                if solar_factor > 0:
+                    solar_gen = 30.0 * solar_factor
+                    if horizon in ["week", "month"]:
+                        # Multi-day solar generation fluctuations (clouds)
+                        solar_gen *= (0.8 + 0.2 * np.cos(i / 2.0))
+            
+            is_peak_hour = 14 <= hour <= 18
+            grid_import = max(5.0, pred_power - solar_gen)
+            
+            predictions.append({
+                "time": label,
+                "predicted_power": round(pred_power, 2),
+                "predicted_solar": round(solar_gen, 2),
+                "grid_import": round(grid_import, 2),
+                "is_peak_hour": is_peak_hour,
+                "outdoor_temp": round(outdoor_temp, 1),
+                "occupancy": pred_occ
+            })
+            
+        return predictions
+
 # Global Instance
 ml_engine = MLEngine()
 

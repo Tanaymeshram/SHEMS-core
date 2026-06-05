@@ -12,6 +12,12 @@ import CarbonFootprint from './pages/CarbonFootprint';
 import AlertsPanel from './pages/AlertsPanel';
 import Maintenance from './pages/Maintenance';
 import Settings from './pages/Settings';
+import AIAssistant from './pages/AIAssistant';
+import EmergencyCommandCenter from './pages/EmergencyCommandCenter';
+import ResearchAnalytics from './pages/ResearchAnalytics';
+import DataIngestion from './pages/DataIngestion';
+import EnergyAnalytics from './pages/EnergyAnalytics';
+import AnomalyDetection from './pages/AnomalyDetection';
 
 // Icons
 import {
@@ -29,7 +35,13 @@ import {
   SunDim,
   User,
   Zap,
-  Leaf
+  Leaf,
+  Bot,
+  ShieldAlert,
+  BarChart,
+  UploadCloud,
+  BookOpen,
+  AlertOctagon
 } from 'lucide-react';
 
 function App() {
@@ -144,14 +156,20 @@ function App() {
   // Navigation Panel List
   const navItems = [
     { id: 'dashboard', name: 'Dashboard Home', icon: Activity },
+    { id: 'ingestion', name: 'Data Ingestion', icon: UploadCloud },
+    { id: 'analytics', name: 'Energy Analytics', icon: BarChart },
     { id: 'hvac', name: 'HVAC Optimization', icon: Thermometer },
-    { id: 'predictions', name: 'Energy Predictions', icon: TrendingUp },
+    { id: 'predictions', name: 'AI Predictions', icon: TrendingUp },
     { id: 'equipment', name: 'Medical Equipment', icon: Monitor },
     { id: 'occupancy', name: 'Occupancy Analytics', icon: Users },
+    { id: 'research', name: 'Research Analytics', icon: BookOpen },
     { id: 'renewables', name: 'Renewable Power', icon: Sun },
     { id: 'carbon', name: 'Carbon Tracking', icon: Leaf },
     { id: 'maintenance', name: 'Predictive Health', icon: Shield },
+    { id: 'anomalies', name: 'Anomaly Scanners', icon: AlertOctagon },
+    { id: 'emergency', name: 'Emergency Grid', icon: ShieldAlert },
     { id: 'alerts', name: 'Alerts & Logs', icon: Bell, badge: true },
+    { id: 'assistant', name: 'AI Copilot Chat', icon: Bot },
     { id: 'settings', name: 'BEMS Settings', icon: SettingsIcon }
   ];
 
@@ -301,6 +319,10 @@ function App() {
     switch (currentPage) {
       case 'dashboard':
         return <Dashboard liveData={liveData} alerts={alerts} onNavigate={setCurrentPage} />;
+      case 'ingestion':
+        return <DataIngestion liveData={liveData} />;
+      case 'analytics':
+        return <EnergyAnalytics liveData={liveData} />;
       case 'hvac':
         return <HvacOptimization liveData={liveData} userRole={user.role} />;
       case 'predictions':
@@ -309,6 +331,8 @@ function App() {
         return <EquipmentMonitoring liveData={liveData} userRole={user.role} />;
       case 'occupancy':
         return <OccupancyAnalytics liveData={liveData} />;
+      case 'research':
+        return <ResearchAnalytics liveData={liveData} />;
       case 'renewables':
         return <Renewables liveData={liveData} />;
       case 'carbon':
@@ -317,6 +341,12 @@ function App() {
         return <AlertsPanel alerts={alerts} onResolveAlert={handleResolveAlert} />;
       case 'maintenance':
         return <Maintenance liveData={liveData} userRole={user.role} />;
+      case 'anomalies':
+        return <AnomalyDetection />;
+      case 'emergency':
+        return <EmergencyCommandCenter liveData={liveData} />;
+      case 'assistant':
+        return <AIAssistant />;
       case 'settings':
         return <Settings liveData={liveData} userRole={user.role} onResetDb={() => handleLogout()} />;
       default:
@@ -357,7 +387,7 @@ function App() {
           </div>
 
           {/* Navigation Links */}
-          <nav className="px-3 mt-4 space-y-1">
+          <nav className="px-3 mt-4 space-y-1 overflow-y-auto max-h-[calc(100vh-250px)] pr-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentPage === item.id;

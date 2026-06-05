@@ -1,11 +1,17 @@
 const API_BASE = '/api';
 
-// Helper for sending requests
+// Helper for sending requests with JWT authentication header propagation
 async function request(url, options = {}) {
+  const token = localStorage.getItem('token');
   const headers = {
     'Content-Type': 'application/json',
     ...options.headers,
   };
+
+  // Inject JWT Bearer Token if present
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
   const response = await fetch(`${API_BASE}${url}`, {
     ...options,
@@ -14,7 +20,7 @@ async function request(url, options = {}) {
 
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}));
-    throw new Error(errData.error || `HTTP error! Status: ${response.status}`);
+    throw new Error(errData.error || errData.detail || `HTTP error! Status: ${response.status}`);
   }
 
   return response.json();
@@ -28,6 +34,9 @@ export const api = {
       body: JSON.stringify({ username, password }),
     });
     localStorage.setItem('user', JSON.stringify(res.user));
+    if (res.access_token) {
+      localStorage.setItem('token', res.access_token);
+    }
     return res.user;
   },
 
@@ -45,6 +54,7 @@ export const api = {
 
   logout() {
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
   },
 
   // Live Dashboard Feed (BEMS)
@@ -65,8 +75,13 @@ export const api = {
   },
 
   // AI & ML Predictions
-  async getEnergyPredictions(outdoorTemp = 24.0) {
-    return request(`/predictions/energy?outdoor_temp=${outdoorTemp}`);
+  async getEnergyPredictions(model = 'random_forest', horizon = 'day', outdoorTemp = 24.0) {
+    return request(`/predictions/energy?model=${model}&horizon=${horizon}&outdoor_temp=${outdoorTemp}`);
+  },
+
+  // Historical Energy Analytics Aggregations
+  async getEnergyAnalytics() {
+    return request('/analytics');
   },
 
   // Medical Equipment Monitor
@@ -87,10 +102,10 @@ export const api = {
   },
 
   // Automation Policies
-  async toggleAutomation(key) {
+  async toggleAutomation(key, value = null) {
     return request('/automation/toggle', {
       method: 'POST',
-      body: JSON.stringify({ key }),
+      body: JSON.stringify({ key, value }),
     });
   },
 
@@ -114,8 +129,8 @@ export const api = {
   },
 
   // Reports Exporter Link
-  getReportExportUrl(type) {
-    return `${API_BASE}/reports/export?type=${type}`;
+  getReportExportUrl(type, format = 'csv') {
+    return `${API_BASE}/reports/export?type=${type}&format=${format}`;
   },
 
   // System Controls
@@ -131,5 +146,57 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ action: 'reset_db' }),
     });
+  },
+
+  async askAssistant(query) {
+    return request('/assistant/ask', {
+      method: 'POST',
+      body: JSON.stringify({ query }),
+    });
+  },
+
+  async uploadCsvData(csvText) {
+    return request('/ingestion/csv', {
+      method: 'POST',
+      body: JSON.stringify({ csv_data: csvText }),
+    });
+  },
+
+  async sendSimulatedSensor(sensorData) {
+    return request('/ingestion/sensor', {
+      method: 'POST',
+      body: JSON.stringify(sensorData),
+    });
+  },
+
+  async overrideHvac(room, overrides) {
+    return request('/hvac/override', {
+      method: 'POST',
+      body: JSON.stringify({ room, ...overrides }),
+    });
+  },
+
+  async ingestInfra(infraData) {
+    return request('/ingestion/infra', {
+      method: 'POST',
+      body: JSON.stringify(infraData),
+    });
+  },
+
+  async getPeakLoadPredictions() {
+    return request('/predictions/peak');
+  },
+
+  async getSolarForecasts() {
+    return request('/renewables/forecast');
+  },
+
+  async getAnomalyHeatmap() {
+    return request('/anomalies/heatmap');
+  },
+
+  async getPredictiveMaintenance() {
+    return request('/maintenance/predictive');
   }
 };
+

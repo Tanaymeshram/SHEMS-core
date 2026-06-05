@@ -37,3 +37,14 @@ logs/
 dist/
 build/
 out/
+
+# Temporary codebase dumps and exporter scripts
+codebase_dump.md
+download_project.py
+all_project_py_files.zip
+all_project_py_files/
+interview_portfolio/
+backend/export_all_to_py.py
+backend/export_codebase.py
+backend/export_portfolio.py
+backend/generate_downloader.py
