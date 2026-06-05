@@ -1138,6 +1138,13 @@ def download_project_zip():
         return FileResponse(zip_path, media_type="application/zip", filename="smart_hospital_energy_bems.zip")
     raise HTTPException(status_code=404, detail="ZIP file not generated yet.")
 
+@app.get("/api/download/pdf", tags=["Static"])
+def download_project_pdf():
+    pdf_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../SHEMS_Documentation.pdf"))
+    if os.path.exists(pdf_path):
+        return FileResponse(pdf_path, media_type="application/pdf", filename="SHEMS_Documentation.pdf")
+    raise HTTPException(status_code=404, detail="PDF document not generated yet.")
+
 static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../frontend/dist"))
 
 # Mount assets subdirectory directly
