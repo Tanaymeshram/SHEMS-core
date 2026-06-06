@@ -31,6 +31,14 @@ function DataIngestion({ liveData }) {
     } 14:00:00,125.4,26.2,45.8,25.0,75.0,75.4,31.6`
   );
   
+  const [predictionCsvText, setPredictionCsvText] = useState(
+    `Timestamp,Target,Value,Horizon\n${
+      new Date().toISOString().split('T')[0]
+    } 15:00:00,total_power,132.5,day\n${
+      new Date().toISOString().split('T')[0]
+    } 15:00:00,solar_gen,18.0,day`
+  );
+  
   // Mode 1: Infrastructure Manual Entry Fields
   const [infraForm, setInfraForm] = useState({
     smart_energy_meter_kw: 120.0,
@@ -105,6 +113,23 @@ function DataIngestion({ liveData }) {
       setTimeout(() => setMessage(''), 5000);
     } catch (err) {
       setError(err.message || 'Failed to ingest CSV records.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handlePredictionCsvIngest = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setMessage('');
+    setError('');
+
+    try {
+      const res = await api.ingestPredictions(predictionCsvText);
+      setMessage(res.message || 'AI Prediction records parsed and saved successfully.');
+      setTimeout(() => setMessage(''), 5000);
+    } catch (err) {
+      setError(err.message || 'Failed to ingest AI predictions.');
     } finally {
       setSubmitting(false);
     }
@@ -402,8 +427,8 @@ function DataIngestion({ liveData }) {
             {/* Config: Supported Integrations selector */}
             <div className="bg-slate-150 dark:bg-slate-900 border border-slate-200 dark:border-slate-850 p-3 rounded-xl space-y-2">
               <label className="block text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">Active Protocol Integration</label>
-              <div className="grid grid-cols-5 gap-1.5 text-[10px] font-bold text-center">
-                {['BACnet', 'Modbus', 'REST APIs', 'MQTT', 'CSV Import'].map(proto => (
+              <div className="grid grid-cols-3 md:grid-cols-6 gap-1.5 text-[10px] font-bold text-center">
+                {['BACnet', 'Modbus', 'REST APIs', 'MQTT', 'CSV Import', 'AI Predictions'].map(proto => (
                   <button
                     key={proto}
                     type="button"
@@ -442,6 +467,31 @@ function DataIngestion({ liveData }) {
                 >
                   <FileSpreadsheet size={14} />
                   <span>{submitting ? 'Parsing Data Blocks...' : 'Import Ingress Audit Matrix'}</span>
+                </button>
+              </form>
+            ) : activeIntegration === 'AI Predictions' ? (
+              /* AI Predictions Upload interface */
+              <form onSubmit={handlePredictionCsvIngest} className="space-y-4">
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[10px] font-bold text-slate-400">AI PREDICTIONS CSV (PASTE ROWS)</label>
+                    <span className="text-[9px] font-mono text-cyan-400">Headers: Timestamp,Target,Value,Horizon</span>
+                  </div>
+                  <textarea
+                    value={predictionCsvText}
+                    onChange={(e) => setPredictionCsvText(e.target.value)}
+                    rows="8"
+                    placeholder="Timestamp,Target,Value,Horizon"
+                    className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl focus:outline-none text-[10px] font-mono leading-normal dark:text-white"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-750 text-white font-bold rounded-xl transition-all shadow-md text-xs flex items-center justify-center gap-1.5"
+                >
+                  <FileSpreadsheet size={14} />
+                  <span>{submitting ? 'Parsing Predictions...' : 'Import AI Predictions Matrix'}</span>
                 </button>
               </form>
             ) : (

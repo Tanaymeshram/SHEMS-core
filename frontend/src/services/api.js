@@ -187,6 +187,21 @@ export const api = {
     return request('/predictions/peak');
   },
 
+  async getSavedPredictions(horizon = 'day', target = null) {
+    let url = `/predictions/saved?horizon=${horizon}`;
+    if (target) {
+      url += `&target=${target}`;
+    }
+    return request(url);
+  },
+
+  async ingestPredictions(csvData) {
+    return request('/ingestion/predictions', {
+      method: 'POST',
+      body: JSON.stringify({ csv_data: csvData }),
+    });
+  },
+
   async getSolarForecasts() {
     return request('/renewables/forecast');
   },

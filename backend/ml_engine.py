@@ -7,7 +7,7 @@ import os
 import pickle
 import random
 from datetime import datetime, timedelta
-from database import get_db_connection
+from database import get_db_connection, engine
 
 MODEL_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 os.makedirs(MODEL_DIR, exist_ok=True)
@@ -27,18 +27,16 @@ class MLEngine:
         self.maintenance_accuracy = 0.94
         
     def load_historical_energy_data(self):
-        conn = get_db_connection()
         query = "SELECT timestamp, total_power, icu_power, ot_power, wards_power, outpatient_power, admin_power, solar_gen, battery_charge, grid_import FROM energy_readings ORDER BY timestamp ASC"
-        df = pd.read_sql_query(query, conn)
+        df = pd.read_sql_query(query, engine)
         
         # Merge occupancy from sensor logs (averaged by hour)
         sensor_query = "SELECT timestamp, SUM(occupancy_count) as total_occ, AVG(temperature) as avg_temp FROM sensor_logs GROUP BY timestamp ORDER BY timestamp ASC"
-        df_sensor = pd.read_sql_query(sensor_query, conn)
+        df_sensor = pd.read_sql_query(sensor_query, engine)
         
         # Merge datasets on timestamp
         df = pd.merge(df, df_sensor, on="timestamp", how="inner")
         
-        conn.close()
         return df
 
     def train_models(self):
@@ -73,6 +71,12 @@ class MLEngine:
             
             with open(self.energy_model_path, 'wb') as f:
                 pickle.dump(self.energy_model, f)
+            
+            # Save metrics as metadata pickle
+            metrics_path = os.path.join(MODEL_DIR, "energy_metrics.pkl")
+            with open(metrics_path, 'wb') as f:
+                pickle.dump({"r2": self.energy_r2, "mae": self.energy_mae}, f)
+                
             print(f"[ML] Energy Forecasting model trained. R2: {self.energy_r2:.3f}, MAE: {self.energy_mae:.2f} kW")
 
             # 2. Isolation Forest for Anomaly Detection (power spike & leakage)
@@ -86,10 +90,7 @@ class MLEngine:
             print("[ML] Anomaly detection model trained.")
 
             # 3. Logistic Regression for Predictive Maintenance
-            # Load maintenance logs
-            conn = get_db_connection()
-            m_df = pd.read_sql_query("SELECT vibration, temperature, oil_pressure, status FROM maintenance_logs", conn)
-            conn.close()
+            m_df = pd.read_sql_query("SELECT vibration, temperature, oil_pressure, status FROM maintenance_logs", engine)
             
             if not m_df.empty:
                 # Convert status string to binary (0 = Healthy, 1 = Warning/Critical)
@@ -117,17 +118,39 @@ class MLEngine:
 
     def load_models(self):
         try:
+            all_loaded = True
             if os.path.exists(self.energy_model_path):
                 with open(self.energy_model_path, 'rb') as f:
                     self.energy_model = pickle.load(f)
+                
+                # Load saved metrics
+                metrics_path = os.path.join(MODEL_DIR, "energy_metrics.pkl")
+                if os.path.exists(metrics_path):
+                    with open(metrics_path, 'rb') as fm:
+                        meta = pickle.load(fm)
+                        self.energy_r2 = meta.get("r2", 0.88)
+                        self.energy_mae = meta.get("mae", 5.2)
+            else:
+                all_loaded = False
+                
             if os.path.exists(self.anomaly_model_path):
                 with open(self.anomaly_model_path, 'rb') as f:
                     self.anomaly_model = pickle.load(f)
+            else:
+                all_loaded = False
+                
             if os.path.exists(self.maintenance_model_path):
                 with open(self.maintenance_model_path, 'rb') as f:
                     self.maintenance_model = pickle.load(f)
-            print("[ML] Saved models loaded successfully.")
-            return True
+            else:
+                all_loaded = False
+                
+            if all_loaded:
+                print("[ML] Saved models loaded successfully.")
+                return True
+            else:
+                print("[ML] Model files are missing from disk. Need to train models.")
+                return False
         except Exception as e:
             print(f"[ML ERROR] Failed to load saved models: {e}")
             return False

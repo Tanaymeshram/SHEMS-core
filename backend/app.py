@@ -15,7 +15,7 @@ from jose import jwt, JWTError
 
 # Project module imports
 from database import init_db, get_db, SessionLocal
-from db_models import User, Setting, Equipment, EnergyReading, SensorLog, MaintenanceLog, Alert, HvacData, SolarData, BatteryData, GeneratorData, UpsData
+from db_models import User, Setting, Equipment, EnergyReading, SensorLog, MaintenanceLog, Alert, HvacData, SolarData, BatteryData, GeneratorData, UpsData, Prediction
 from ml_engine import ml_engine
 from iot_simulator import iot_simulator
 
@@ -250,7 +250,7 @@ def override_hvac(req: HvacOverrideRequest, db: Session = Depends(get_db)):
 # 4. PREDICTIVE ENERGY ANALYTICS
 # ==========================================
 @app.get("/api/predictions/energy", tags=["Predictions"])
-def get_energy_predictions(model: str = "random_forest", horizon: str = "day", outdoor_temp: float = 24.0):
+def get_energy_predictions(model: str = "random_forest", horizon: str = "day", outdoor_temp: float = 24.0, db: Session = Depends(get_db)):
     pred_list = ml_engine.predict_energy_forecast(model=model, horizon=horizon, base_temp=outdoor_temp)
     
     if model == "xgboost":
@@ -297,6 +297,28 @@ def get_energy_predictions(model: str = "random_forest", horizon: str = "day", o
         predicted_monthly_bill = est_cost
         peak_shaving_savings = sum(p["predicted_solar"] for p in pred_list) * 0.15 * 24.0
         
+    # Sync generated predictions to database Predictions table
+    try:
+        # Clear existing to prevent bloat
+        db.query(Prediction).filter(Prediction.horizon == horizon).delete()
+        for p in pred_list:
+            db.add(Prediction(
+                timestamp=p["time"],
+                target="total_power",
+                value=p["predicted_power"],
+                horizon=horizon
+            ))
+            db.add(Prediction(
+                timestamp=p["time"],
+                target="solar_gen",
+                value=p["predicted_solar"],
+                horizon=horizon
+            ))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"[Prediction Sync Error] {e}")
+
     return {
         "predictions": pred_list,
         "metrics": {
@@ -310,6 +332,58 @@ def get_energy_predictions(model: str = "random_forest", horizon: str = "day", o
             "training_time": training_time
         }
     }
+
+@app.get("/api/predictions/saved", tags=["Predictions"])
+def get_saved_predictions(horizon: str = "day", target: str = None, db: Session = Depends(get_db)):
+    query = db.query(Prediction).filter(Prediction.horizon == horizon)
+    if target:
+        query = query.filter(Prediction.target == target)
+    rows = query.order_by(Prediction.timestamp.asc()).all()
+    return [{
+        "id": r.id,
+        "timestamp": r.timestamp,
+        "target": r.target,
+        "value": r.value,
+        "horizon": r.horizon
+    } for r in rows]
+
+class PredictionIngestionRequest(BaseModel):
+    csv_data: str
+
+@app.post("/api/ingestion/predictions", tags=["Ingestion"])
+def ingest_predictions(req: PredictionIngestionRequest, db: Session = Depends(get_db)):
+    try:
+        reader = csv.reader(io.StringIO(req.csv_data.strip()))
+        header = next(reader)  # skip header
+        
+        count = 0
+        for row in reader:
+            if len(row) < 4:
+                continue
+            ts, target, val_str, hor = row[0], row[1], row[2], row[3]
+            val = float(val_str)
+            
+            existing = db.query(Prediction).filter(
+                Prediction.timestamp == ts,
+                Prediction.target == target,
+                Prediction.horizon == hor
+            ).first()
+            
+            if existing:
+                existing.value = val
+            else:
+                db.add(Prediction(
+                    timestamp=ts,
+                    target=target,
+                    value=val,
+                    horizon=hor
+                ))
+            count += 1
+        db.commit()
+        return {"message": f"Successfully ingested {count} AI prediction records into database."}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Prediction Ingestion CSV parse error: {str(e)}")
 
 # ==========================================
 # 4.5 ENERGY ANALYTICS AGGREGATIONS

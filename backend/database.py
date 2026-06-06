@@ -293,6 +293,54 @@ def init_db():
             db.commit()
             print("[DB] Default alerts seeded.")
 
+        # 7. Seed Predictions
+        from db_models import Prediction
+        import math
+        if db.query(Prediction).count() == 0:
+            print("[DB] Seeding default AI predictions...")
+            pred_time_base = datetime.now()
+            default_predictions = []
+            for i in range(24):
+                pred_time = pred_time_base + timedelta(hours=i)
+                ts = pred_time.strftime("%Y-%m-%d %H:00:00")
+                
+                hour = pred_time.hour
+                base_power = 65.0
+                outdoor_temp = 24.0 + 4.0 * math.sin((hour - 8) / 24 * 2 * math.pi)
+                hvac_contribution = max(0, (outdoor_temp - 22.0) * 2.5)
+                
+                if hour >= 22 or hour <= 6:
+                    pred_occ = 50
+                elif 8 <= hour <= 17:
+                    pred_occ = 150
+                else:
+                    pred_occ = 95
+                
+                occupancy_contribution = pred_occ * 0.25
+                pred_power = base_power + hvac_contribution + occupancy_contribution
+                
+                solar_gen = 0.0
+                if 6 <= hour <= 18:
+                    solar_factor = 1.0 - abs(hour - 12) / 6.0
+                    if solar_factor > 0:
+                        solar_gen = 30.0 * solar_factor
+                
+                default_predictions.append(Prediction(
+                    timestamp=ts,
+                    target="total_power",
+                    value=round(pred_power, 2),
+                    horizon="day"
+                ))
+                default_predictions.append(Prediction(
+                    timestamp=ts,
+                    target="solar_gen",
+                    value=round(solar_gen, 2),
+                    horizon="day"
+                ))
+            db.add_all(default_predictions)
+            db.commit()
+            print("[DB] Default predictions seeded.")
+
         db.commit()
         print(f"[DB] Database fully initialized and seeded. Active backend: {DB_TYPE.upper()}")
     except Exception as e:
