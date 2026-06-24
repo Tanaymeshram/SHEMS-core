@@ -2,8 +2,6 @@ services:
   - type: web
     name: shems-core-app
     env: docker
-    dockercontext: .
-    dockerfilepath: Dockerfile
     plan: free
     envVars:
       - key: DB_TYPE
