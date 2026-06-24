@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: shems-core-app
+    env: docker
+    dockercontext: .
+    dockerfilepath: Dockerfile
+    plan: free
+    envVars:
+      - key: DB_TYPE
+        value: sqlite
+      - key: MQTT_ENABLED
+        value: "true"
+      - key: MQTT_BROKER
+        value: broker.hivemq.com

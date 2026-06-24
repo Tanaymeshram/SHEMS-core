@@ -1242,6 +1242,6 @@ async def fallback_route(fallback: str):
 
 if __name__ == "__main__":
     import uvicorn
-    flask_port = int(os.getenv("FLASK_PORT", 5000))
+    flask_port = int(os.getenv("PORT", os.getenv("FLASK_PORT", 5000)))
     # Run uvicorn on the configured port
     uvicorn.run("app:app", host="0.0.0.0", port=flask_port, reload=False)
